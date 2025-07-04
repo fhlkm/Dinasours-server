@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# SQLite database files
+*.db
+
+# Local environment files
+.env.*

@@ -1,0 +1,26 @@
+LOCAL DEVELOPMENT SETUP
+========================
+
+1. Install Python 3.11 or higher
+2. Install required packages:
+   pip install fastapi uvicorn pydantic
+
+3. Run the API locally:
+   python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+4. Access your API at:
+   - Main API: http://localhost:8000/
+   - API Documentation: http://localhost:8000/docs
+   - All tasks: http://localhost:8000/tasks
+
+FILES TO DOWNLOAD:
+- main.py (main API endpoints)
+- database.py (database setup)
+- models.py (task operations)
+- schemas.py (data validation)
+- tasks.db (optional - your existing data)
+
+UPLOAD BACK TO REPLIT:
+1. Drag and drop files into Replit workspace
+2. Or use "Upload" button in file explorer
+3. Files will automatically sync and restart server
