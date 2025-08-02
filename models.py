@@ -174,3 +174,151 @@ class TaskModel:
         except sqlite3.Error as e:
             logger.error(f"Error counting tasks for user {user_id}: {str(e)}")
             raise Exception(f"Failed to count user tasks: {str(e)}")
+    
+    def add_new_member(self, email: str, relationship: str, password: str, gender: str, nickname: str, birth: str) -> str:
+        """Add a new member to the database and return the user ID"""
+        try:
+            cursor = self.db.cursor()
+            
+            # Generate a unique user ID (you might want to implement a more sophisticated ID generation)
+            import uuid
+            user_id = str(uuid.uuid4())[:30]  # Limit to 30 characters as per schema
+            
+            cursor.execute('''
+                INSERT INTO members (userId, email, relationship, nickname, gender, birthday, password, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, email, relationship, nickname, gender, birth, password, datetime.now().isoformat()))
+            
+            self.db.commit()
+            logger.info(f"Created new member with user ID: {user_id}")
+            return user_id
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Integrity error creating member: {str(e)}")
+            raise Exception(f"Failed to create member - email might already exist: {str(e)}")
+        except sqlite3.Error as e:
+            logger.error(f"Error creating member: {str(e)}")
+            raise Exception(f"Failed to create member: {str(e)}")
+    
+    def getUser(self, email: str, password: str) -> Optional[str]:
+        """Get user ID by validating email and password"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT userId
+                FROM members
+                WHERE email = ? AND password = ?
+            ''', (email, password))
+            
+            result = cursor.fetchone()
+            if result:
+                user_id = result[0]
+                logger.info(f"User authenticated successfully: {user_id}")
+                return user_id
+            else:
+                logger.warning(f"email or password is incorrect")
+                return None
+        except sqlite3.Error as e:
+            logger.error(f"Error authenticating user with email {email}: {str(e)}")
+            raise Exception(f"Failed to authenticate user: {str(e)}")
+    
+    def create_session(self, user_id: str) -> dict:
+        """Create a new session for a user and return session info"""
+        try:
+            cursor = self.db.cursor()
+            
+            # Generate unique session ID and token
+            import uuid
+            import jwt
+            import time
+            
+            session_id = str(uuid.uuid4())
+            session_token = jwt.encode(
+                {
+                    'user_id': user_id,
+                    'session_id': session_id,
+                    'exp': int(time.time()) + (24 * 60 * 60*365*5)  # 24*365*5 hours from now
+                },
+                'your-secret-key',  # In production, use environment variable
+                algorithm='HS256'
+            )
+            
+            # Calculate expiration time (5 years from now)
+            from datetime import datetime, timedelta
+            expires_at = (datetime.now() + timedelta(hours=24*365*5)).isoformat()
+            
+            # Delete any existing sessions for this user
+            cursor.execute('DELETE FROM sessions WHERE userId = ?', (user_id,))
+            
+            # Insert new session
+            cursor.execute('''
+                INSERT INTO sessions (sessionId, userId, sessionToken, expiresAt)
+                VALUES (?, ?, ?, ?)
+            ''', (session_id, user_id, session_token, expires_at))
+            
+            self.db.commit()
+            logger.info(f"Created new session for user: {user_id}")
+            
+            return {
+                "sessionToken": session_token,
+                "expiresAt": expires_at
+            }
+        except sqlite3.Error as e:
+            logger.error(f"Error creating session for user {user_id}: {str(e)}")
+            raise Exception(f"Failed to create session: {str(e)}")
+    
+    def validate_session(self, session_token: str) -> Optional[str]:
+        """Validate a session token and return user ID if valid"""
+        try:
+            cursor = self.db.cursor()
+            
+            # Check if session exists and is not expired
+            cursor.execute('''
+                SELECT userId
+                FROM sessions
+                WHERE sessionToken = ? AND expiresAt > ?
+            ''', (session_token, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            if result:
+                user_id = result[0]
+                logger.info(f"Session validated for user: {user_id}")
+                return user_id
+            else:
+                logger.warning("Invalid or expired session token")
+                return None
+        except sqlite3.Error as e:
+            logger.error(f"Error validating session: {str(e)}")
+            raise Exception(f"Failed to validate session: {str(e)}")
+    
+    def delete_session(self, user_id: str) -> bool:
+        """Delete all sessions for a user"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('DELETE FROM sessions WHERE userId = ?', (user_id,))
+            self.db.commit()
+            
+            if cursor.rowcount > 0:
+                logger.info(f"Deleted sessions for user: {user_id}")
+                return True
+            else:
+                logger.warning(f"No sessions found for user: {user_id}")
+                return False
+        except sqlite3.Error as e:
+            logger.error(f"Error deleting sessions for user {user_id}: {str(e)}")
+            raise Exception(f"Failed to delete sessions: {str(e)}")
+    
+    def cleanup_expired_sessions(self) -> int:
+        """Clean up expired sessions and return number of deleted sessions"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('DELETE FROM sessions WHERE expiresAt <= ?', (datetime.now().isoformat(),))
+            deleted_count = cursor.rowcount
+            self.db.commit()
+            
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} expired sessions")
+            
+            return deleted_count
+        except sqlite3.Error as e:
+            logger.error(f"Error cleaning up expired sessions: {str(e)}")
+            raise Exception(f"Failed to cleanup sessions: {str(e)}")

@@ -4,7 +4,6 @@ from datetime import datetime
 
 class TaskCreate(BaseModel):
     """Schema for creating a new task"""
-    userId: int = Field(..., ge=1, description="User ID must be a positive integer")
     taskName: str = Field(..., min_length=1, max_length=200, description="Task name cannot be empty")
     category: str = Field(..., min_length=1, max_length=100, description="Category cannot be empty")
     time: str = Field(..., description="Time in ISO format or human-readable format")
@@ -30,9 +29,8 @@ class TaskCreate(BaseModel):
         return v.lower()
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
-                "userId": 1,
                 "taskName": "Complete project documentation",
                 "category": "work",
                 "time": "2025-07-04T10:00:00",
@@ -43,7 +41,6 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     """Schema for updating an existing task"""
     taskId: int = Field(..., ge=1, description="Task ID must be a positive integer")
-    userId: int = Field(..., ge=1, description="User ID must be a positive integer")
     taskName: str = Field(..., min_length=1, max_length=200, description="Task name cannot be empty")
     category: str = Field(..., min_length=1, max_length=100, description="Category cannot be empty")
     time: str = Field(..., description="Time in ISO format or human-readable format")
@@ -69,10 +66,9 @@ class TaskUpdate(BaseModel):
         return v.lower()
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "taskId": 1,
-                "userId": 1,
                 "taskName": "Complete project documentation - Updated",
                 "category": "work",
                 "time": "2025-07-04T12:00:00",
@@ -90,7 +86,7 @@ class TaskResponse(BaseModel):
     status: str
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "taskId": 1,
                 "userId": 1,
@@ -106,7 +102,7 @@ class TaskDelete(BaseModel):
     message: str
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "Task with ID 1 deleted successfully"
             }
@@ -117,7 +113,7 @@ class ErrorResponse(BaseModel):
     detail: str
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "detail": "Task with ID 1 not found"
             }
@@ -131,11 +127,128 @@ class TaskStats(BaseModel):
     in_progress_tasks: int
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total_tasks": 10,
                 "pending_tasks": 3,
                 "completed_tasks": 5,
                 "in_progress_tasks": 2
+            }
+        }
+
+class UserRegister(BaseModel):
+    """Schema for user registration"""
+    email: str = Field(..., description="User's email address")
+    relationship: str = Field(..., min_length=1, max_length=50, description="User's relationship")
+    password: str = Field(..., min_length=6, max_length=100, description="User's password (min 6 characters)")
+    gender: str = Field(..., min_length=1, max_length=20, description="User's gender")
+    nickname: str = Field(..., min_length=1, max_length=50, description="User's nickname")
+    birthday: str = Field(..., description="User's birthday in ISO format")
+    
+    @validator('email')
+    def validate_email(cls, v):
+        if not v.strip():
+            raise ValueError('Email cannot be empty or whitespace only')
+        if '@' not in v:
+            raise ValueError('Email must contain @ symbol')
+        return v.strip().lower()
+    
+    @validator('relationship')
+    def validate_relationship(cls, v):
+        if not v.strip():
+            raise ValueError('Relationship cannot be empty or whitespace only')
+        return v.strip()
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if not v.strip():
+            raise ValueError('Password cannot be empty or whitespace only')
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters long')
+        return v.strip()
+    
+    @validator('gender')
+    def validate_gender(cls, v):
+        if not v.strip():
+            raise ValueError('Gender cannot be empty or whitespace only')
+        return v.strip()
+    
+    @validator('nickname')
+    def validate_nickname(cls, v):
+        if not v.strip():
+            raise ValueError('Nickname cannot be empty or whitespace only')
+        return v.strip()
+    
+    @validator('birthday')
+    def validate_birthday(cls, v):
+        if not v.strip():
+            raise ValueError('Birthday cannot be empty or whitespace only')
+        return v.strip()
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "john.doe@example.com",
+                "relationship": "friend",
+                "password": "securepassword123",
+                "gender": "male",
+                "nickname": "John",
+                "birthday": "1990-01-01"
+            }
+        }
+
+class UserRegisterResponse(BaseModel):
+    """Schema for user registration response"""
+    userId: str
+    message: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "userId": "abc123-def456-ghi789",
+                "message": "User registered successfully"
+            }
+        }
+
+class UserLogin(BaseModel):
+    """Schema for user login"""
+    email: str = Field(..., description="User's email address")
+    password: str = Field(..., min_length=1, description="User's password")
+    
+    @validator('email')
+    def validate_email(cls, v):
+        if not v.strip():
+            raise ValueError('Email cannot be empty or whitespace only')
+        return v.strip().lower()
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if not v.strip():
+            raise ValueError('Password cannot be empty or whitespace only')
+        return v.strip()
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "john.doe@example.com",
+                "password": "securepassword123"
+            }
+        }
+
+class UserLoginResponse(BaseModel):
+    """Schema for user login response"""
+    userId: str
+    message: str
+    session: dict
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "userId": "abc123-def456-ghi789",
+                "message": "Login successful",
+                "session": {
+                    "sessionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYWJjMTIzLWRlZjQ1Ni1naGk3ODkiLCJzZXNzaW9uX2lkIjoiMTIzNDU2Nzg5MCIsImV4cCI6MTczNTY3ODkwMH0.signature_part_here",
+                    "expiresAt": "2025-08-03T15:30:00Z"
+                }
             }
         }

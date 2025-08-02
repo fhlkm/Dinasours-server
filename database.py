@@ -68,6 +68,33 @@ def init_db():
                 )
             ''')
             
+            # Create members table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS members (
+                    userId VARCHAR(30) PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    relationship TEXT NOT NULL,
+                    nickname TEXT NOT NULL,
+                    gender TEXT NOT NULL,
+                    birthday TIMESTAMP,
+                    password TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create sessions table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sessions (
+                    sessionId VARCHAR(100) PRIMARY KEY,
+                    userId VARCHAR(30) NOT NULL,
+                    sessionToken TEXT UNIQUE NOT NULL,
+                    expiresAt TIMESTAMP NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (userId) REFERENCES members(userId) ON DELETE CASCADE
+                )
+            ''')
+            
             # Create index for better performance
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_user_id ON tasks(userId)
@@ -79,6 +106,28 @@ def init_db():
             
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_status ON tasks(status)
+            ''')
+            
+            # Create indexes for members table
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_members_relationship ON members(relationship)
+            ''')
+            
+            # Create indexes for sessions table
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_sessions_userId ON sessions(userId)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(sessionToken)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expiresAt)
             ''')
             
             conn.commit()
