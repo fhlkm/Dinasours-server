@@ -57,7 +57,7 @@ def init_db():
             # Create tasks table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS tasks (
-                    taskId BIGINT PRIMARY KEY AUTOINCREMENT,
+                    taskId INTEGER PRIMARY KEY AUTOINCREMENT,
                     userId BIGINT NOT NULL,
                     taskName TEXT NOT NULL,
                     category TEXT NOT NULL,
