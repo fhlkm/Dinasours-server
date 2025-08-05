@@ -102,6 +102,41 @@ class TaskModel:
             logger.error(f"Error fetching all tasks: {str(e)}")
             raise Exception(f"Failed to fetch tasks: {str(e)}")
     
+    def get_all_tasks_paginated(self, offset: int = 0, limit: int = 20) -> List[Tuple]:
+        """Get paginated tasks sorted by time in descending order"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT taskId, userId, taskName, category, time, status
+                FROM tasks
+                ORDER BY time DESC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching paginated tasks: {str(e)}")
+            raise Exception(f"Failed to fetch paginated tasks: {str(e)}")
+    
+    def get_tasks_by_user_paginated(self, user_id: int, offset: int = 0, limit: int = 20) -> List[Tuple]:
+        """Get paginated tasks for a specific user sorted by time in descending order"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT taskId, userId, taskName, category, time, status
+                FROM tasks
+                WHERE userId = ?
+                ORDER BY time DESC
+                LIMIT ? OFFSET ?
+            ''', (user_id, limit, offset))
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching paginated tasks for user {user_id}: {str(e)}")
+            raise Exception(f"Failed to fetch paginated user tasks: {str(e)}")
+    
     def get_tasks_by_user(self, user_id: int) -> List[Tuple]:
         """Get all tasks for a specific user sorted by time in descending order"""
         try:
@@ -322,3 +357,21 @@ class TaskModel:
         except sqlite3.Error as e:
             logger.error(f"Error cleaning up expired sessions: {str(e)}")
             raise Exception(f"Failed to cleanup sessions: {str(e)}")
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Tuple]:
+        """Get user details by user ID"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT userId, email, relationship, nickname, gender, birthday
+                FROM members
+                WHERE userId = ?
+            ''', (user_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                return tuple(result)
+            return None
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching user by ID {user_id}: {str(e)}")
+            raise Exception(f"Failed to fetch user: {str(e)}")

@@ -40,7 +40,7 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     """Schema for updating an existing task"""
-    taskId: int = Field(..., ge=1, description="Task ID must be a positive integer")
+    taskId: int = Field(..., ge=1, description="Task ID must be a positive long integer")
     taskName: str = Field(..., min_length=1, max_length=200, description="Task name cannot be empty")
     category: str = Field(..., min_length=1, max_length=100, description="Category cannot be empty")
     time: str = Field(..., description="Time in ISO format or human-readable format")
@@ -78,8 +78,8 @@ class TaskUpdate(BaseModel):
 
 class TaskResponse(BaseModel):
     """Schema for task response"""
-    taskId: int
-    userId: int
+    taskId: int  # Will be Long in JSON
+    userId: int  # Will be Long in JSON
     taskName: str
     category: str
     time: str
@@ -133,6 +133,38 @@ class TaskStats(BaseModel):
                 "pending_tasks": 3,
                 "completed_tasks": 5,
                 "in_progress_tasks": 2
+            }
+        }
+
+class PaginatedTaskResponse(BaseModel):
+    """Schema for paginated task response"""
+    tasks: List[TaskResponse]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "tasks": [
+                    {
+                        "taskId": 1,
+                        "userId": 1,
+                        "taskName": "Complete project documentation",
+                        "category": "work",
+                        "time": "2025-07-04T10:00:00",
+                        "status": "pending"
+                    }
+                ],
+                "total_count": 50,
+                "page": 1,
+                "page_size": 20,
+                "total_pages": 3,
+                "has_next": True,
+                "has_previous": False
             }
         }
 
@@ -200,13 +232,28 @@ class UserRegister(BaseModel):
 class UserRegisterResponse(BaseModel):
     """Schema for user registration response"""
     userId: str
+    email: str
+    relationship: str
+    gender: str
+    nickname: str
+    birthday: str
     message: str
+    session: dict
     
     class Config:
         json_schema_extra = {
             "example": {
                 "userId": "abc123-def456-ghi789",
-                "message": "User registered successfully"
+                "email": "john.doe@example.com",
+                "relationship": "friend",
+                "gender": "male",
+                "nickname": "John",
+                "birthday": "1990-01-01",
+                "message": "User registered successfully",
+                "session": {
+                    "sessionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYWJjMTIzLWRlZjQ1Ni1naGk3ODkiLCJzZXNzaW9uX2lkIjoiMTIzNDU2Nzg5MCIsImV4cCI6MTczNTY3ODkwMH0.signature_part_here",
+                    "expiresAt": "2025-08-03T15:30:00Z"
+                }
             }
         }
 
@@ -238,6 +285,11 @@ class UserLogin(BaseModel):
 class UserLoginResponse(BaseModel):
     """Schema for user login response"""
     userId: str
+    email: str
+    relationship: str
+    gender: str
+    nickname: str
+    birthday: str
     message: str
     session: dict
     
@@ -245,6 +297,11 @@ class UserLoginResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "userId": "abc123-def456-ghi789",
+                "email": "john.doe@example.com",
+                "relationship": "friend",
+                "gender": "male",
+                "nickname": "John",
+                "birthday": "1990-01-01",
                 "message": "Login successful",
                 "session": {
                     "sessionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYWJjMTIzLWRlZjQ1Ni1naGk3ODkiLCJzZXNzaW9uX2lkIjoiMTIzNDU2Nzg5MCIsImV4cCI6MTczNTY3ODkwMH0.signature_part_here",

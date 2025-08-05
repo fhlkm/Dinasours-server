@@ -4,7 +4,7 @@ import uvicorn
 from typing import List, Optional
 from database import get_db, init_db, get_db_context
 from models import TaskModel
-from schemas import TaskCreate, TaskUpdate, TaskResponse, UserRegister, UserRegisterResponse, UserLogin, UserLoginResponse
+from schemas import TaskCreate, TaskUpdate, TaskResponse, PaginatedTaskResponse, UserRegister, UserRegisterResponse, UserLogin, UserLoginResponse
 import logging
 from contextlib import asynccontextmanager
 
@@ -218,6 +218,66 @@ async def get_all_tasks(
         logger.error(f"Error retrieving tasks: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve tasks: {str(e)}")
 
+@app.get("/tasks/paginated", response_model=PaginatedTaskResponse)
+async def get_all_tasks_paginated(
+    page: int = 1,
+    page_size: int = 20,
+    current_user_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Get paginated tasks sorted by time in descending order"""
+    try:
+        # Validate pagination parameters
+        if page < 1:
+            raise HTTPException(status_code=400, detail="Page must be greater than 0")
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(status_code=400, detail="Page size must be between 1 and 100")
+        
+        task_model = TaskModel(db)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get paginated tasks
+        tasks = task_model.get_all_tasks_paginated(offset=offset, limit=page_size)
+        
+        # Get total count for pagination info
+        total_count = task_model.get_task_count()
+        
+        # Calculate pagination info
+        total_pages = (total_count + page_size - 1) // page_size
+        has_next = page < total_pages
+        has_previous = page > 1
+        
+        # Convert to response format
+        task_list = []
+        for task in tasks:
+            task_list.append(TaskResponse(
+                taskId=task[0],
+                userId=task[1],
+                taskName=task[2],
+                category=task[3],
+                time=task[4],
+                status=task[5]
+            ))
+        
+        logger.info(f"Retrieved {len(task_list)} tasks (page {page}/{total_pages}) for user: {current_user_id}")
+        
+        return PaginatedTaskResponse(
+            tasks=task_list,
+            total_count=total_count,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_previous=has_previous
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving paginated tasks: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve paginated tasks: {str(e)}")
+
 @app.get("/tasks/user/{user_id}", response_model=List[TaskResponse])
 async def get_user_tasks(
     user_id: str, 
@@ -252,6 +312,71 @@ async def get_user_tasks(
         logger.error(f"Error retrieving tasks for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve tasks for user: {str(e)}")
 
+@app.get("/tasks/user/{user_id}/paginated", response_model=PaginatedTaskResponse)
+async def get_user_tasks_paginated(
+    user_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    current_user_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Get paginated tasks for a specific user sorted by time in descending order"""
+    try:
+        # Ensure users can only access their own tasks
+        if user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="You can only access your own tasks")
+        
+        # Validate pagination parameters
+        if page < 1:
+            raise HTTPException(status_code=400, detail="Page must be greater than 0")
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(status_code=400, detail="Page size must be between 1 and 100")
+        
+        task_model = TaskModel(db)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get paginated tasks for user
+        tasks = task_model.get_tasks_by_user_paginated(user_id, offset=offset, limit=page_size)
+        
+        # Get total count for pagination info
+        total_count = task_model.get_user_task_count(user_id)
+        
+        # Calculate pagination info
+        total_pages = (total_count + page_size - 1) // page_size
+        has_next = page < total_pages
+        has_previous = page > 1
+        
+        # Convert to response format
+        task_list = []
+        for task in tasks:
+            task_list.append(TaskResponse(
+                taskId=task[0],
+                userId=task[1],
+                taskName=task[2],
+                category=task[3],
+                time=task[4],
+                status=task[5]
+            ))
+        
+        logger.info(f"Retrieved {len(task_list)} tasks (page {page}/{total_pages}) for user {user_id}")
+        
+        return PaginatedTaskResponse(
+            tasks=task_list,
+            total_count=total_count,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_previous=has_previous
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving paginated tasks for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve paginated tasks for user: {str(e)}")
+
 @app.post("/register", response_model=UserRegisterResponse, status_code=201)
 async def register_user(user: UserRegister, db=Depends(get_db)):
     """Register a new user"""
@@ -269,9 +394,19 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
         # Create new session for the user after successful registration
         session_info = task_model.create_session(user_id)
         
+        # Get user details for response
+        user_details = task_model.get_user_by_id(user_id)
+        if not user_details:
+            raise HTTPException(status_code=500, detail="Failed to retrieve user details after registration")
+        
         logger.info(f"User registered successfully with ID: {user_id}")
         return UserRegisterResponse(
-            userId=user_id,
+            userId=user_details[0],
+            email=user_details[1],
+            relationship=user_details[2],
+            gender=user_details[4],
+            nickname=user_details[3],
+            birthday=user_details[5],
             message="User registered successfully",
             session=session_info
         )
@@ -298,9 +433,19 @@ async def login_user(user: UserLogin, db=Depends(get_db)):
             # Create new session for the user
             session_info = task_model.create_session(user_id)
             
+            # Get user details for response
+            user_details = task_model.get_user_by_id(user_id)
+            if not user_details:
+                raise HTTPException(status_code=500, detail="Failed to retrieve user details after login")
+            
             logger.info(f"User logged in successfully: {user_id}")
             return UserLoginResponse(
-                userId=user_id,
+                userId=user_details[0],
+                email=user_details[1],
+                relationship=user_details[2],
+                nickname=user_details[3],
+                gender=user_details[4],
+                birthday=user_details[5],
                 message="Login successful",
                 session=session_info
             )
