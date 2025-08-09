@@ -530,4 +530,11 @@ async def global_exception_handler(request, exc):
     )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Run with HTTPS using local self-signed certificate (for development only)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8443,
+        ssl_keyfile="certs/localhost.key",
+        ssl_certfile="certs/localhost.crt",
+    )

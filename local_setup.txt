@@ -24,3 +24,12 @@ UPLOAD BACK TO REPLIT:
 1. Drag and drop files into Replit workspace
 2. Or use "Upload" button in file explorer
 3. Files will automatically sync and restart server
+
+For https:
+
+cd /Users/hanlufeng/Documents/github/dinasours-project/dinasours-server/Dinasours-server
+python3 -m venv .venv && source .venv/bin/activate
+pip install -U pip fastapi uvicorn pydantic PyJWT
+python main.py
+
+https://localhost:8443/
