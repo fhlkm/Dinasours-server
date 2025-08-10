@@ -377,6 +377,52 @@ async def get_user_tasks_paginated(
         logger.error(f"Error retrieving paginated tasks for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve paginated tasks for user: {str(e)}")
 
+@app.get("/tasks/user/{user_id}/month/{year}/{month}", response_model=List[TaskResponse])
+async def get_user_tasks_by_month(
+    user_id: str,
+    year: int,
+    month: int,
+    current_user_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Get all tasks for a specific user in a specific month"""
+    try:
+        # Ensure users can only access their own tasks
+        if user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="You can only access your own tasks")
+        
+        # Validate month and year parameters
+        if month < 1 or month > 12:
+            raise HTTPException(status_code=400, detail="Month must be between 1 and 12")
+        if year < 1900 or year > 2100:
+            raise HTTPException(status_code=400, detail="Year must be between 1900 and 2100")
+        
+        task_model = TaskModel(db)
+        
+        # Get tasks for the specified month
+        tasks = task_model.get_user_tasks_by_month(user_id, year, month)
+        
+        # Convert to response format
+        task_list = []
+        for task in tasks:
+            task_list.append(TaskResponse(
+                taskId=task[0],
+                userId=task[1],
+                taskName=task[2],
+                category=task[3],
+                time=task[4],
+                status=task[5]
+            ))
+        
+        logger.info(f"Retrieved {len(task_list)} tasks for user {user_id} in {year}-{month}")
+        
+        return task_list
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving tasks for user {user_id} in {year}-{month}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve tasks for user in month: {str(e)}")
+
 @app.post("/register", response_model=UserRegisterResponse, status_code=201)
 async def register_user(user: UserRegister, db=Depends(get_db)):
     """Register a new user"""

@@ -79,7 +79,7 @@ class TaskUpdate(BaseModel):
 class TaskResponse(BaseModel):
     """Schema for task response"""
     taskId: int  # Will be Long in JSON
-    userId: int  # Will be Long in JSON
+    userId: str  # Changed from int to str to match UUID strings used for user IDs
     taskName: str
     category: str
     time: str
@@ -89,7 +89,7 @@ class TaskResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "taskId": 1,
-                "userId": 1,
+                "userId": "80975f27-ce40-4d72-b448-68516f",
                 "taskName": "Complete project documentation",
                 "category": "work",
                 "time": "2025-07-04T10:00:00",

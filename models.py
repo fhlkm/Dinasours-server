@@ -11,7 +11,7 @@ class TaskModel:
     def __init__(self, db_connection):
         self.db = db_connection
     
-    def create_task(self, user_id: int, task_name: str, category: str, time: str, status: str) -> int:
+    def create_task(self, user_id: str, task_name: str, category: str, time: str, status: str) -> int:
         """Create a new task and return its ID"""
         try:
             cursor = self.db.cursor()
@@ -46,7 +46,7 @@ class TaskModel:
             logger.error(f"Error fetching task by ID {task_id}: {str(e)}")
             raise Exception(f"Failed to fetch task: {str(e)}")
     
-    def update_task(self, task_id: int, user_id: int, task_name: str, category: str, time: str, status: str) -> bool:
+    def update_task(self, task_id: int, user_id: str, task_name: str, category: str, time: str, status: str) -> bool:
         """Update an existing task"""
         try:
             cursor = self.db.cursor()
@@ -100,10 +100,10 @@ class TaskModel:
             return [tuple(row) for row in results]
         except sqlite3.Error as e:
             logger.error(f"Error fetching all tasks: {str(e)}")
-            raise Exception(f"Failed to fetch tasks: {str(e)}")
+            raise Exception(f"Failed to fetch all tasks: {str(e)}")
     
     def get_all_tasks_paginated(self, offset: int = 0, limit: int = 20) -> List[Tuple]:
-        """Get paginated tasks sorted by time in descending order"""
+        """Get all tasks with pagination sorted by time in descending order"""
         try:
             cursor = self.db.cursor()
             cursor.execute('''
@@ -119,7 +119,7 @@ class TaskModel:
             logger.error(f"Error fetching paginated tasks: {str(e)}")
             raise Exception(f"Failed to fetch paginated tasks: {str(e)}")
     
-    def get_tasks_by_user_paginated(self, user_id: int, offset: int = 0, limit: int = 20) -> List[Tuple]:
+    def get_tasks_by_user_paginated(self, user_id: str, offset: int = 0, limit: int = 20) -> List[Tuple]:
         """Get paginated tasks for a specific user sorted by time in descending order"""
         try:
             cursor = self.db.cursor()
@@ -137,7 +137,7 @@ class TaskModel:
             logger.error(f"Error fetching paginated tasks for user {user_id}: {str(e)}")
             raise Exception(f"Failed to fetch paginated user tasks: {str(e)}")
     
-    def get_tasks_by_user(self, user_id: int) -> List[Tuple]:
+    def get_tasks_by_user(self, user_id: str) -> List[Tuple]:
         """Get all tasks for a specific user sorted by time in descending order"""
         try:
             cursor = self.db.cursor()
@@ -199,7 +199,7 @@ class TaskModel:
             logger.error(f"Error counting tasks: {str(e)}")
             raise Exception(f"Failed to count tasks: {str(e)}")
     
-    def get_user_task_count(self, user_id: int) -> int:
+    def get_user_task_count(self, user_id: str) -> int:
         """Get number of tasks for a specific user"""
         try:
             cursor = self.db.cursor()
@@ -375,3 +375,20 @@ class TaskModel:
         except sqlite3.Error as e:
             logger.error(f"Error fetching user by ID {user_id}: {str(e)}")
             raise Exception(f"Failed to fetch user: {str(e)}")
+
+    def get_user_tasks_by_month(self, user_id: str, year: int, month: int) -> List[Tuple]:
+        """Get all tasks for a specific user in a specific month"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT taskId, userId, taskName, category, time, status
+                FROM tasks
+                WHERE userId = ? AND strftime('%Y', time) = ? AND strftime('%m', time) = ?
+                ORDER BY time DESC
+            ''', (user_id, str(year), f"{month:02d}"))
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching tasks for user {user_id} in {year}-{month:02d}: {str(e)}")
+            raise Exception(f"Failed to fetch user tasks by month: {str(e)}")
