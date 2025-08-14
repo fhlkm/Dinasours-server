@@ -392,3 +392,58 @@ class TaskModel:
         except sqlite3.Error as e:
             logger.error(f"Error fetching tasks for user {user_id} in {year}-{month:02d}: {str(e)}")
             raise Exception(f"Failed to fetch user tasks by month: {str(e)}")
+
+    def get_completed_tasks_by_category_for_user(self, user_id: str) -> List[Tuple]:
+        """Get count of completed tasks by category for a specific user"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT category, COUNT(*) as count
+                FROM tasks
+                WHERE userId = ? AND status = 'completed'
+                GROUP BY category
+                ORDER BY count DESC
+            ''', (user_id,))
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching completed tasks by category for user {user_id}: {str(e)}")
+            raise Exception(f"Failed to fetch completed tasks by category: {str(e)}")
+
+    def get_completed_tasks_by_category_all_users(self) -> List[Tuple]:
+        """Get count of completed tasks by category across all users"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT category, COUNT(*) as count
+                FROM tasks
+                WHERE status = 'completed'
+                GROUP BY category
+                ORDER BY count DESC
+            ''')
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching completed tasks by category for all users: {str(e)}")
+            raise Exception(f"Failed to fetch completed tasks by category for all users: {str(e)}")
+
+    def get_completed_tasks_by_category_this_week_for_user(self, user_id: str) -> List[Tuple]:
+        """Get count of completed tasks by category for a specific user for the current week"""
+        try:
+            cursor = self.db.cursor()
+            cursor.execute('''
+                SELECT category, COUNT(*) as count
+                FROM tasks
+                WHERE userId = ? AND status = 'completed' 
+                AND strftime('%Y-%W', time) = strftime('%Y-%W', 'now')
+                GROUP BY category
+                ORDER BY count DESC
+            ''', (user_id,))
+            
+            results = cursor.fetchall()
+            return [tuple(row) for row in results]
+        except sqlite3.Error as e:
+            logger.error(f"Error fetching completed tasks by category for user {user_id} this week: {str(e)}")
+            raise Exception(f"Failed to fetch completed tasks by category this week: {str(e)}")

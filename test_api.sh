@@ -73,6 +73,47 @@ TASK_ID=$(echo $TASK_RESPONSE | grep -o '"taskId":[0-9]*' | cut -d':' -f2)
 print_result $?
 
 echo ""
+echo -e "${BLUE}3b. Create Additional Completed Tasks for Testing${NC}"
+echo "POST /task (completed work task)"
+COMPLETED_WORK_TASK=$(curl -s -X POST "$BASE_URL/task" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d '{
+    "taskName": "Finish project documentation",
+    "category": "work",
+    "time": "2025-01-14T15:00:00",
+    "status": "completed"
+  }')
+echo "Response: $COMPLETED_WORK_TASK"
+print_result $?
+
+echo "POST /task (completed personal task)"
+COMPLETED_PERSONAL_TASK=$(curl -s -X POST "$BASE_URL/task" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d '{
+    "taskName": "Read book chapter",
+    "category": "personal",
+    "time": "2025-01-13T20:00:00",
+    "status": "completed"
+  }')
+echo "Response: $COMPLETED_PERSONAL_TASK"
+print_result $?
+
+echo "POST /task (completed study task)"
+COMPLETED_STUDY_TASK=$(curl -s -X POST "$BASE_URL/task" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d '{
+    "taskName": "Complete online course",
+    "category": "study",
+    "time": "2025-01-12T10:00:00",
+    "status": "completed"
+  }')
+echo "Response: $COMPLETED_STUDY_TASK"
+print_result $?
+
+echo ""
 echo -e "${BLUE}4. Get Tasks by User ID (Requires Session)${NC}"
 echo "GET /tasks/user/$USER_ID"
 USER_TASKS_RESPONSE=$(curl -s -X GET "$BASE_URL/tasks/user/$USER_ID" \
@@ -182,11 +223,27 @@ echo "Response: $LOGOUT_TASK_RESPONSE"
 print_result $?
 
 echo ""
+echo -e "${BLUE}14. Test Completed Tasks by Category (This Week)${NC}"
+echo "GET /tasks/user/$USER_ID/completed-by-category-this-week"
+COMPLETED_CATEGORY_RESPONSE=$(curl -s -X GET "$BASE_URL/tasks/user/$USER_ID/completed-by-category-this-week" \
+  -H "Authorization: Bearer $SESSION_TOKEN")
+echo "Response: $COMPLETED_CATEGORY_RESPONSE"
+print_result $?
+
+echo ""
+echo -e "${BLUE}15. Test Completed Tasks by Category (All Users)${NC}"
+echo "GET /tasks/completed-by-category"
+COMPLETED_CATEGORY_ALL_RESPONSE=$(curl -s -X GET "$BASE_URL/tasks/completed-by-category")
+echo "Response: $COMPLETED_CATEGORY_ALL_RESPONSE"
+print_result $?
+
+echo ""
 echo -e "${YELLOW}📊 Test Summary:${NC}"
 echo "================================"
 echo "✅ Register User"
 echo "✅ User Login" 
 echo "✅ Create Task (with session)"
+echo "✅ Create Additional Completed Tasks"
 echo "✅ Get User Tasks (with session)"
 echo "✅ Update Task (with session)"
 echo "✅ Get All Tasks (with session)"
@@ -197,5 +254,7 @@ echo "✅ Validate Session"
 echo "✅ Logout User"
 echo "✅ Test Invalid Session After Logout"
 echo "✅ Test Task Access After Logout"
+echo "✅ Test Completed Tasks by Category (This Week)"
+echo "✅ Test Completed Tasks by Category (All Users)"
 echo ""
 echo -e "${GREEN}🎉 All tests completed!${NC}" 

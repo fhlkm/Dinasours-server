@@ -309,3 +309,16 @@ class UserLoginResponse(BaseModel):
                 }
             }
         }
+
+class CompletedTasksByCategoryResponse(BaseModel):
+    """Schema for completed tasks by category response"""
+    category: str
+    count: int
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "category": "work",
+                "count": 5
+            }
+        }

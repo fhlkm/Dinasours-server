@@ -4,7 +4,7 @@ import uvicorn
 from typing import List, Optional
 from database import get_db, init_db, get_db_context
 from models import TaskModel
-from schemas import TaskCreate, TaskUpdate, TaskResponse, PaginatedTaskResponse, UserRegister, UserRegisterResponse, UserLogin, UserLoginResponse
+from schemas import TaskCreate, TaskUpdate, TaskResponse, PaginatedTaskResponse, UserRegister, UserRegisterResponse, UserLogin, UserLoginResponse, CompletedTasksByCategoryResponse
 import logging
 from contextlib import asynccontextmanager
 
@@ -70,7 +70,9 @@ async def root():
             "update_task": "PUT /task",
             "delete_task": "DELETE /task/{task_id}",
             "get_all_tasks": "GET /tasks",
-            "get_user_tasks": "GET /tasks/user/{user_id}"
+            "get_user_tasks": "GET /tasks/user/{user_id}",
+            "get_completed_tasks_by_category": "GET /tasks/user/{user_id}/completed-by-category",
+            "get_completed_tasks_by_category_this_week": "GET /tasks/user/{user_id}/completed-by-category-this-week"
         }
     }
 
@@ -565,6 +567,58 @@ async def get_task_stats(db=Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting task stats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get task stats: {str(e)}")
+
+@app.get("/tasks/completed-by-category", response_model=List[CompletedTasksByCategoryResponse])
+async def get_completed_tasks_by_category_all(db=Depends(get_db)):
+    """Get count of completed tasks by category across all users"""
+    try:
+        task_model = TaskModel(db)
+        completed_tasks_by_category = task_model.get_completed_tasks_by_category_all_users()
+        
+        # Convert to response format
+        result = []
+        for category, count in completed_tasks_by_category:
+            result.append(CompletedTasksByCategoryResponse(
+                category=category,
+                count=count
+            ))
+        
+        logger.info(f"Retrieved completed tasks by category for all users: {len(result)} categories")
+        return result
+    except Exception as e:
+        logger.error(f"Error retrieving completed tasks by category for all users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve completed tasks by category: {str(e)}")
+
+@app.get("/tasks/user/{user_id}/completed-by-category-this-week", response_model=List[CompletedTasksByCategoryResponse])
+async def get_completed_tasks_by_category_this_week(
+    user_id: str,
+    current_user_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Get count of completed tasks by category for a specific user for the current week"""
+    try:
+        # Ensure users can only access their own tasks
+        if user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="You can only access your own tasks")
+        
+        task_model = TaskModel(db)
+        completed_tasks_by_category = task_model.get_completed_tasks_by_category_this_week_for_user(user_id)
+        
+        # Convert to response format
+        result = []
+        for category, count in completed_tasks_by_category:
+            result.append(CompletedTasksByCategoryResponse(
+                category=category,
+                count=count
+            ))
+        
+        logger.info(f"Retrieved completed tasks by category for user {user_id} this week: {len(result)} categories")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving completed tasks by category for user {user_id} this week: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve completed tasks by category this week: {str(e)}")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
