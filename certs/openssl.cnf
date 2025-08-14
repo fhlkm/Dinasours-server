@@ -20,5 +20,6 @@ subjectAltName = @alt_names
 
 [ alt_names ]
 DNS.1 = localhost
+DNS.2 = 23c9749c-648b-49f8-b02a-24846fc5369a-00-1gscord6qg7zn.worf.replit.dev
 IP.1  = 127.0.0.1
 IP.2  = 10.0.2.2
